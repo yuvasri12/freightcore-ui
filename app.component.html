@@ -1,0 +1,209 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">F</div>
+      <div>
+        <strong>FreightCore</strong>
+        <span>Internal operations</span>
+      </div>
+    </div>
+
+    <nav aria-label="FreightCore navigation">
+      <a class="active" href="#dashboard">Dashboard</a>
+      <a href="#shipments">Shipments</a>
+      <a href="#create">Create</a>
+      <a href="#detail">Details</a>
+      <a href="#actions">Warehouse</a>
+    </nav>
+
+    <div class="role-card">
+      <span>Signed in as</span>
+      <strong>Operations Lead</strong>
+      <small>Warehouse + dispatch access</small>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DevBridge AI Suite</p>
+        <h1>Freight Operations Dashboard</h1>
+      </div>
+      <div class="top-actions">
+        <button class="ghost" type="button" (click)="loadShipments()">Refresh</button>
+        <a class="primary-link" href="#create">New Shipment</a>
+      </div>
+    </header>
+
+    <section class="metrics" id="dashboard" aria-label="Shipment metrics">
+      <article class="metric">
+        <span>Total Shipments</span>
+        <strong>{{ metric() }}</strong>
+        <small>Active records</small>
+      </article>
+      <article class="metric">
+        <span>In Warehouse</span>
+        <strong>{{ metric('IN_WAREHOUSE') + metric('RECEIVED') }}</strong>
+        <small>Awaiting dispatch</small>
+      </article>
+      <article class="metric">
+        <span>In Transit</span>
+        <strong>{{ metric('IN_TRANSIT') }}</strong>
+        <small>Moving now</small>
+      </article>
+      <article class="metric">
+        <span>Delivered</span>
+        <strong>{{ metric('DELIVERED') }}</strong>
+        <small>Completed</small>
+      </article>
+      <article class="metric">
+        <span>Cancelled</span>
+        <strong>{{ metric('CANCELLED') }}</strong>
+        <small>Stopped</small>
+      </article>
+    </section>
+
+    <section class="workspace-grid">
+      <article class="panel table-panel" id="shipments">
+        <div class="panel-head">
+          <div>
+            <h2>Shipment Management</h2>
+            <p>Search, filter, select, and inspect shipment records.</p>
+          </div>
+          <span class="sync-pill" *ngIf="tableLoading">Loading...</span>
+        </div>
+
+        <div class="filters">
+          <input [(ngModel)]="searchText" placeholder="Search customer" (keyup.enter)="loadShipments()">
+          <select [(ngModel)]="statusFilter" (change)="loadShipments()">
+            <option value="">All Status</option>
+            <option value="NEW">NEW</option>
+            <option value="RECEIVED">RECEIVED</option>
+            <option value="IN_WAREHOUSE">IN_WAREHOUSE</option>
+            <option value="IN_TRANSIT">IN_TRANSIT</option>
+            <option value="DELIVERED">DELIVERED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+          <select [(ngModel)]="modeFilter" (change)="loadShipments()">
+            <option value="">All Modes</option>
+            <option value="FREIGHT">FREIGHT</option>
+            <option value="GROUND">GROUND</option>
+            <option value="AIR">AIR</option>
+            <option value="OCEAN">OCEAN</option>
+          </select>
+          <button class="ghost" type="button" (click)="loadShipments()">Apply</button>
+          <button class="text-btn" type="button" (click)="clearFilters()">Clear</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tracking</th>
+                <th>Customer</th>
+                <th>Route</th>
+                <th>Mode</th>
+                <th>Status</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let shipment of shipments" (click)="selectShipment(shipment)" [class.selected]="selectedShipment?.id === shipment.id">
+                <td><strong>{{ shipment.trackingNumber }}</strong></td>
+                <td>{{ shipment.customerName }}</td>
+                <td>{{ shipment.origin }} -> {{ shipment.destination }}</td>
+                <td><span class="mode">{{ shipment.mode }}</span></td>
+                <td><span [class]="'badge ' + statusClass(shipment.status)">{{ shipment.status }}</span></td>
+                <td>{{ shipment.updatedAt | date:'short' }}</td>
+              </tr>
+              <tr *ngIf="!tableLoading && shipments.length === 0">
+                <td colspan="6" class="empty">No shipments found. Create a shipment to get started.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <aside class="side-stack">
+        <article class="panel" id="create">
+          <div class="panel-head">
+            <div>
+              <h2>Create Shipment</h2>
+              <p>Required fields are validated before submission.</p>
+            </div>
+          </div>
+          <form class="form" (ngSubmit)="createShipment()">
+            <label>Customer <input [(ngModel)]="createForm.customerName" name="customerName"></label>
+            <label>Origin <input [(ngModel)]="createForm.origin" name="origin"></label>
+            <label>Destination <input [(ngModel)]="createForm.destination" name="destination"></label>
+            <label>Mode
+              <select [(ngModel)]="createForm.mode" name="mode">
+                <option value="FREIGHT">FREIGHT</option>
+                <option value="GROUND">GROUND</option>
+                <option value="AIR">AIR</option>
+                <option value="OCEAN">OCEAN</option>
+              </select>
+            </label>
+            <label>Weight <input type="number" [(ngModel)]="createForm.weight" name="weight"></label>
+            <button class="primary" type="submit" [disabled]="loading">{{ loading ? 'Creating...' : 'Create Shipment' }}</button>
+          </form>
+        </article>
+
+        <article class="panel" id="actions">
+          <div class="panel-head">
+            <div>
+              <h2>Quick Actions</h2>
+              <p *ngIf="selectedShipment">Selected: {{ selectedShipment.trackingNumber }}</p>
+              <p *ngIf="!selectedShipment">Select a shipment from the table.</p>
+            </div>
+          </div>
+          <div class="action-list">
+            <button type="button" class="action-btn" [disabled]="!selectedShipment" (click)="receiveFreight()">Receive Freight</button>
+            <button type="button" class="action-btn" [disabled]="!selectedShipment" (click)="assignLocation()">Assign Location</button>
+            <button type="button" class="action-btn danger-soft" [disabled]="!selectedShipment" (click)="dispatchShipment()">Dispatch</button>
+          </div>
+        </article>
+      </aside>
+    </section>
+
+    <section class="detail-grid" id="detail" *ngIf="selectedShipment">
+      <article class="panel detail-card">
+        <div class="panel-head">
+          <div>
+            <h2>{{ selectedShipment.trackingNumber }}</h2>
+            <p>{{ selectedShipment.customerName }} | {{ selectedShipment.origin }} -> {{ selectedShipment.destination }}</p>
+          </div>
+          <span [class]="'badge ' + statusClass(selectedShipment.status)">{{ selectedShipment.status }}</span>
+        </div>
+        <div class="detail-stats">
+          <div><span>Mode</span><strong>{{ selectedShipment.mode }}</strong></div>
+          <div><span>Weight</span><strong>{{ selectedShipment.weight }} kg</strong></div>
+          <div><span>Created</span><strong>{{ selectedShipment.createdAt | date:'shortDate' }}</strong></div>
+        </div>
+      </article>
+
+      <article class="panel timeline-card">
+        <div class="panel-head">
+          <div>
+            <h2>Activity Timeline</h2>
+            <p>Audit history from FreightCore backend.</p>
+          </div>
+        </div>
+        <ol class="timeline">
+          <li *ngFor="let item of selectedShipment.timeline">
+            <div [class]="'dot ' + statusClass(item.status)"></div>
+            <div>
+              <strong>{{ item.status }}</strong>
+              <p>{{ item.remarks }}</p>
+              <span>{{ item.updatedBy }} | {{ item.updatedAt | date:'medium' }}</span>
+            </div>
+          </li>
+        </ol>
+      </article>
+    </section>
+  </main>
+
+  <div *ngIf="toast" [class]="'toast ' + toast.type">
+    {{ toast.message }}
+  </div>
+</div>
