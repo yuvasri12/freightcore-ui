@@ -1,0 +1,31 @@
+# FreightCore UI
+
+## Overview
+
+FreightCore UI is the internal operations dashboard for the LogiCore OMS platform. It enables warehouse operators, dispatch teams, and administrators to manage shipment lifecycles through a modern Angular-based interface.
+
+## Features
+
+- Dashboard
+- Shipment List
+- Create Shipment
+- Shipment Details
+- Warehouse Operations
+- Dispatch Management
+- Shipment Timeline
+
+## Technology Stack
+
+- Angular
+- TypeScript
+- CSS
+
+## Backend Dependency
+
+This application connects to the **LogiCore OMS** backend.
+
+Related Repository: `logicore-oms`
+
+## License
+
+Demo project developed for learning and portfolio purposes.
